@@ -1,0 +1,56 @@
+#adminmenu li.menu-top,
+#adminmenu .wp-submenu li {
+    position: relative;
+}
+
+#adminmenu .fanm-admin-submenu {
+    display: none;
+    position: absolute;
+    top: -7px;
+    left: 100%;
+    min-width: 200px;
+    margin: 0 0 0 4px;
+    padding: 7px 0 8px;
+    background: #2c3338;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+    z-index: 99999;
+}
+
+#adminmenu .fanm-admin-submenu li {
+    display: block;
+    min-width: 200px;
+}
+
+#adminmenu .fanm-admin-submenu a {
+    display: block;
+    padding: 5px 12px;
+    color: #c3c4c7;
+    white-space: nowrap;
+}
+
+#adminmenu .fanm-admin-submenu a:hover,
+#adminmenu .fanm-admin-submenu a:focus {
+    color: #72aee6;
+}
+
+#adminmenu .fanm-has-children > a::after {
+    content: "›";
+    float: right;
+    margin-left: 12px;
+    opacity: 0.75;
+}
+
+#adminmenu .fanm-has-children:hover > .fanm-admin-submenu,
+#adminmenu .fanm-has-children:focus-within > .fanm-admin-submenu {
+    display: block;
+}
+
+@media screen and (max-width: 782px) {
+    #adminmenu .fanm-admin-submenu {
+        position: static;
+        margin: 0;
+        padding-left: 10px;
+        box-shadow: none;
+    }
+}
+
