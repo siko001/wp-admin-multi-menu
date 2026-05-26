@@ -16,6 +16,7 @@ class FANM_Tree_Renderer
     public function tree(array $menus, $parent_id = 0, int $level = 0): string
     {
         $items = '';
+        $menus = $this->repository->ordered($menus);
 
         foreach ($menus as $id => $menu) {
             if ($this->repository->normalize_parent($menu['parent'] ?? 0) !== $this->repository->normalize_parent($parent_id)) {
@@ -38,118 +39,53 @@ HTML;
 
     public function item(array $menu, string $id, int $level = 0): string
     {
-        $icon_options = $this->icon_options($menu['icon'] ?? 'dashicons-admin-generic');
-        $title_placeholder = esc_attr__('Menu Title', 'flexible-admin-nested-menu');
         $parent = esc_attr((string) ($menu['parent'] ?? 0));
         $item_id = esc_attr($id);
         $item_level = esc_attr((string) $level);
-        $title = esc_attr($menu['title'] ?? '');
+        $title = esc_html($menu['title'] ?? '');
+        $title_attr = esc_attr($menu['title'] ?? '');
         $slug = esc_attr($menu['slug'] ?? '');
         $cap = esc_attr($menu['cap'] ?? 'manage_options');
-        $callback = esc_attr($menu['callback'] ?? '__return_empty_string');
+        $icon = esc_attr($menu['icon'] ?? 'dashicons-admin-generic');
+        $url = esc_url($menu['url'] ?? '');
+        $hidden = !empty($menu['hidden']) ? '1' : '0';
+        $hidden_checked = !empty($menu['hidden']) ? ' checked' : '';
+        $custom_title = !empty($menu['custom_title']) ? '1' : '0';
         $move_label = esc_attr__('Move or expand menu item', 'flexible-admin-nested-menu');
-        $child_label = esc_html__('Child', 'flexible-admin-nested-menu');
-        $delete_label = esc_html__('Delete', 'flexible-admin-nested-menu');
+        $hide_label = esc_attr__('Hide this menu item', 'flexible-admin-nested-menu');
 
         return <<<HTML
-<li data-id="{$item_id}" data-level="{$item_level}" data-parent="{$parent}">
-    <button type="button" class="fanm-handle" aria-label="{$move_label}">☰</button>
-    <div class="fanm-fields">
-        <input type="text" class="title" value="{$title}" placeholder="{$title_placeholder}">
-        <input type="text" class="slug" value="{$slug}" placeholder="my-page-slug">
-        <input type="text" class="cap" value="{$cap}" placeholder="manage_options">
-        <input type="text" class="callback" value="{$callback}" placeholder="__return_empty_string">
-        <select class="icon">{$icon_options}</select>
-    </div>
-    <div class="fanm-item-actions">
-        <button type="button" class="add-child button">+ {$child_label}</button>
-        <button type="button" class="delete-item button">{$delete_label}</button>
+<li data-id="{$item_id}" data-level="{$item_level}" data-parent="{$parent}" data-hidden="{$hidden}">
+    <div class="fanm-item-row" role="button" tabindex="0" aria-label="{$move_label}">
+        <span class="fanm-handle dashicons dashicons-menu" aria-hidden="true"></span>
+        <div class="fanm-fields">
+            <span class="fanm-menu-title" tabindex="0" role="button">{$title}</span>
+            <span class="fanm-menu-slug">{$slug}</span>
+            <input type="hidden" class="title" value="{$title_attr}">
+            <input type="hidden" class="slug" value="{$slug}">
+            <input type="hidden" class="cap" value="{$cap}">
+            <input type="hidden" class="icon" value="{$icon}">
+            <input type="hidden" class="source" value="existing">
+            <input type="hidden" class="url" value="{$url}">
+            <input type="hidden" class="hidden" value="{$hidden}">
+            <input type="hidden" class="custom_title" value="{$custom_title}">
+        </div>
+        <div class="fanm-item-actions" aria-label="Menu item hierarchy actions">
+            <label class="fanm-visibility-toggle" title="{$hide_label}">
+                <input class="fanm-hidden-toggle" type="checkbox"{$hidden_checked}>
+                <span class="dashicons dashicons-visibility" aria-hidden="true"></span>
+            </label>
+            <button class="button-link fanm-sort-item" type="button">
+                <span class="dashicons dashicons-sort" aria-hidden="true"></span>
+            </button>
+            <button class="button-link fanm-outdent-item" type="button">
+                <span class="dashicons dashicons-arrow-left-alt2" aria-hidden="true"></span>
+            </button>
+            <button class="button-link fanm-indent-item" type="button">
+                <span class="dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
+            </button>
+        </div>
     </div>
 HTML;
-    }
-
-    private function icon_options(string $current_icon): string
-    {
-        $options = '';
-
-        foreach ($this->icons() as $icon) {
-            $selected = selected($icon, $current_icon, false);
-            $label = esc_html($icon);
-            $value = esc_attr($icon);
-            $options .= "<option value=\"{$value}\" {$selected}>{$label}</option>";
-        }
-
-        return $options;
-    }
-
-    private function icons(): array
-    {
-        return [
-            'dashicons-admin-home',
-            'dashicons-dashboard',
-            'dashicons-admin-post',
-            'dashicons-admin-media',
-            'dashicons-admin-links',
-            'dashicons-admin-page',
-            'dashicons-admin-comments',
-            'dashicons-admin-appearance',
-            'dashicons-admin-plugins',
-            'dashicons-admin-users',
-            'dashicons-admin-tools',
-            'dashicons-admin-settings',
-            'dashicons-admin-network',
-            'dashicons-admin-generic',
-            'dashicons-admin-collapse',
-            'dashicons-filter',
-            'dashicons-admin-customizer',
-            'dashicons-admin-multisite',
-            'dashicons-admin-site',
-            'dashicons-admin-site-alt',
-            'dashicons-admin-site-alt2',
-            'dashicons-admin-site-alt3',
-            'dashicons-admin-user',
-            'dashicons-admin-background',
-            'dashicons-admin-counter',
-            'dashicons-admin-categories',
-            'dashicons-admin-menu',
-            'dashicons-admin-options',
-            'dashicons-admin-overview',
-            'dashicons-admin-colors',
-            'dashicons-admin-themes',
-            'dashicons-admin-widgets',
-            'dashicons-admin-menus',
-            'dashicons-visibility',
-            'dashicons-visibility-alt',
-            'dashicons-hidden',
-            'dashicons-post-status',
-            'dashicons-edit',
-            'dashicons-post-trash',
-            'dashicons-trash',
-            'dashicons-edit-page',
-            'dashicons-edit-pages',
-            'dashicons-edit-comments',
-            'dashicons-edit-large',
-            'dashicons-edit-alt',
-            'dashicons-welcome-write-blog',
-            'dashicons-welcome-add-page',
-            'dashicons-welcome-view-site',
-            'dashicons-welcome-widgets-menus',
-            'dashicons-welcome-comments',
-            'dashicons-welcome-learn-more',
-            'dashicons-format-image',
-            'dashicons-format-gallery',
-            'dashicons-format-audio',
-            'dashicons-format-video',
-            'dashicons-format-status',
-            'dashicons-format-aside',
-            'dashicons-format-quote',
-            'dashicons-format-chat',
-            'dashicons-format-standard',
-            'dashicons-format-links',
-            'dashicons-format-link',
-            'dashicons-chart-bar',
-            'dashicons-media-spreadsheet',
-            'dashicons-users',
-        ];
     }
 }

@@ -1,12 +1,10 @@
-name: Release WP Admin Multi Menu Plugin
+name: Release WordPress Plugin
 
 on:
   push:
     branches:
       - main
       - master
-    paths:
-      - '**'
     tags:
       - 'v*'
   workflow_dispatch:
@@ -20,7 +18,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: wp-admin-multi-menu-release
+  group: wordpress-plugin-release
   cancel-in-progress: false
 
 jobs:
@@ -28,9 +26,10 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      PLUGIN_SLUG: wp-admin-multi-menu
-      PLUGIN_FILE: admin-menu-builder.php
-      ZIP_NAME: wp-admin-multi-menu.zip
+      PLUGIN_SLUG: multi-level-menu
+      PLUGIN_FILE: multi-level-menu.php
+      ZIP_NAME: multi-level-menu.zip
+      PLUGIN_NAME: Multi Level Menu
 
     steps:
       - name: Checkout code
@@ -117,10 +116,10 @@ jobs:
           elif [[ "${GITHUB_REF}" == refs/heads/* ]]; then
             gh release create "$TAG" "dist/${ZIP_NAME}" \
               --target "${GITHUB_SHA}" \
-              --title "WP Admin Multi Menu v${VERSION}" \
+              --title "${PLUGIN_NAME} v${VERSION}" \
               --notes "Release v${VERSION}"
           else
             gh release create "$TAG" "dist/${ZIP_NAME}" \
-              --title "WP Admin Multi Menu v${VERSION}" \
+              --title "${PLUGIN_NAME} v${VERSION}" \
               --notes "Release v${VERSION}"
           fi

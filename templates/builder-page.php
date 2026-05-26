@@ -6,58 +6,57 @@ if (!defined('ABSPATH')) {
 
 ?>
 <div class="wrap fanm-builder">
-    <h1><?php esc_html_e('Flexible Admin Nested Menu Builder', 'flexible-admin-nested-menu'); ?></h1>
-    <p class="description">
-        <?php esc_html_e('Drag to nest or reorder items. Save to apply the custom structure to the WordPress admin sidebar.', 'flexible-admin-nested-menu'); ?>
-    </p>
+    <h1><?php esc_html_e('Admin Menu Builder', 'flexible-admin-nested-menu'); ?></h1>
 
+    <nav class="nav-tab-wrapper fanm-tabs" aria-label="<?php esc_attr_e('Menu builder sections', 'flexible-admin-nested-menu'); ?>">
+        <a class="nav-tab nav-tab-active" href="<?php echo esc_url(admin_url('admin.php?page=fanm-builder')); ?>"><?php esc_html_e('Menu Layout', 'flexible-admin-nested-menu'); ?></a>
+        <a class="nav-tab" href="<?php echo esc_url(admin_url('admin.php?page=fanm-access')); ?>"><?php esc_html_e('Menu Access', 'flexible-admin-nested-menu'); ?></a>
+    </nav>
     <div class="fanm-toolbar">
-        <button id="fanm-add-root" class="button button-primary" type="button">
-            <?php esc_html_e('Add Top-Level Menu', 'flexible-admin-nested-menu'); ?>
-        </button>
-        <button id="fanm-import-demo" class="button" type="button">
-            <?php esc_html_e('Import Demo', 'flexible-admin-nested-menu'); ?>
-        </button>
-        <button id="fanm-import-json" class="button" type="button">
-            <?php esc_html_e('Import JSON', 'flexible-admin-nested-menu'); ?>
-        </button>
-        <button id="fanm-export-json" class="button" type="button">
-            <?php esc_html_e('Export JSON', 'flexible-admin-nested-menu'); ?>
-        </button>
-        <button id="fanm-save-all" class="button button-large button-primary" type="button">
-            <?php esc_html_e('Save & Apply Menus', 'flexible-admin-nested-menu'); ?>
-        </button>
-    </div>
-
-    <div id="fanm-menu-tree" class="fanm-tree-root">
-        <?php echo $tree_html; ?>
-    </div>
-
-    <div class="fanm-preview">
-        <h2><?php esc_html_e('Live Preview', 'flexible-admin-nested-menu'); ?></h2>
-        <iframe src="<?php echo esc_url($admin_url); ?>" title="<?php esc_attr_e('WordPress admin menu preview', 'flexible-admin-nested-menu'); ?>"></iframe>
-    </div>
-
-    <template id="fanm-import-modal-template">
-        <div class="fanm-modal" id="fanm-import-modal">
-            <div class="fanm-modal-content">
-                <div class="fanm-modal-header">
-                    <h2><?php esc_html_e('Import Menus from JSON', 'flexible-admin-nested-menu'); ?></h2>
-                    <button class="fanm-modal-close" type="button" aria-label="<?php esc_attr_e('Close modal', 'flexible-admin-nested-menu'); ?>">&times;</button>
-                </div>
-                <div class="fanm-modal-body">
-                    <p><?php esc_html_e('Paste your JSON menu configuration below:', 'flexible-admin-nested-menu'); ?></p>
-                    <textarea id="fanm-import-textarea" placeholder='{"menu_id": {"title": "Menu Title"}}'></textarea>
-                </div>
-                <div class="fanm-modal-footer">
-                    <button class="button" id="fanm-cancel-import" type="button">
-                        <?php esc_html_e('Cancel', 'flexible-admin-nested-menu'); ?>
-                    </button>
-                    <button class="button button-primary" id="fanm-do-import" type="button">
-                        <?php esc_html_e('Import', 'flexible-admin-nested-menu'); ?>
-                    </button>
-                </div>
-            </div>
+        <div class="fanm-toolbar-left">
+            <a id="fanm-restore-defaults" class="button" href="<?php echo esc_url($restore_defaults_url); ?>">
+                <?php esc_html_e('Restore Defaults', 'flexible-admin-nested-menu'); ?>
+            </a>
+            <button id="fanm-export-sidebar" class="button" type="button">
+                <?php esc_html_e('Save Current Sidebar', 'flexible-admin-nested-menu'); ?>
+            </button>
+            <button id="fanm-restore-sidebar" class="button" type="button">
+                <?php esc_html_e('Restore Saved Sidebar', 'flexible-admin-nested-menu'); ?>
+            </button>
+            <input id="fanm-restore-sidebar-file" class="fanm-screen-reader-file" type="file" accept="application/json,.json">
+            <button id="fanm-expand-all" class="button" type="button">
+                <?php esc_html_e('Expand All', 'flexible-admin-nested-menu'); ?>
+            </button>
+            <button id="fanm-collapse-all" class="button" type="button">
+                <?php esc_html_e('Collapse All', 'flexible-admin-nested-menu'); ?>
+            </button>
         </div>
-    </template>
+        <div class="fanm-toolbar-right">
+            <button id="fanm-save-all" class="button button-large button-primary" type="button">
+                <?php esc_html_e('Save & Apply Menus', 'flexible-admin-nested-menu'); ?>
+            </button>
+        </div>
+    </div>
+
+    <div class="fanm-builder-grid" id="fanm-builder-grid">
+        <section class="fanm-builder-panel">
+            <h2><?php esc_html_e('Menu Layout', 'flexible-admin-nested-menu'); ?></h2>
+            <div id="fanm-menu-tree" class="fanm-tree-root">
+                <?php echo $tree_html; ?>
+            </div>
+        </section>
+        <section class="fanm-builder-panel fanm-preview-panel" id="fanm-preview-panel">
+            <div class="fanm-panel-heading">
+                <h2><?php esc_html_e('Preview', 'flexible-admin-nested-menu'); ?></h2>
+                <button id="fanm-close-preview" class="button-link fanm-panel-icon-button" type="button" aria-label="<?php esc_attr_e('Close preview', 'flexible-admin-nested-menu'); ?>">
+                    <span class="dashicons dashicons-no-alt" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div id="fanm-admin-preview" class="fanm-admin-preview" aria-label="<?php esc_attr_e('WordPress admin menu preview', 'flexible-admin-nested-menu'); ?>"></div>
+        </section>
+        <button id="fanm-open-preview" class="fanm-open-preview" type="button" hidden aria-label="<?php esc_attr_e('Open preview', 'flexible-admin-nested-menu'); ?>" title="<?php esc_attr_e('Open preview', 'flexible-admin-nested-menu'); ?>">
+            <span class="dashicons dashicons-menu" aria-hidden="true"></span>
+            <span class="screen-reader-text"><?php esc_html_e('Open preview', 'flexible-admin-nested-menu'); ?></span>
+        </button>
+    </div>
 </div>
