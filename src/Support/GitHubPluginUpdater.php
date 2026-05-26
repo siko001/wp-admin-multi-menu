@@ -16,6 +16,9 @@ final class GitHubPluginUpdater
     {
         add_filter('pre_set_site_transient_update_plugins', [$this, 'injectUpdate']);
         add_filter('plugins_api', [$this, 'pluginInfo'], 20, 3);
+        add_filter('plugin_action_links_'.$this->pluginBasename(), [$this, 'pluginActionLinks']);
+        add_action('admin_post_'.$this->manualCheckAction(), [$this, 'handleManualUpdateCheck']);
+        add_action('admin_notices', [$this, 'manualUpdateNotice']);
     }
 
     public function injectUpdate(object $transient): object
@@ -94,6 +97,102 @@ final class GitHubPluginUpdater
                 'changelog' => nl2br(esc_html($release['notes'] ?: 'See the GitHub release notes.')),
             ],
         ];
+    }
+
+    /**
+     * @param  array<string, string>  $links
+     * @return array<string, string>
+     */
+    public function pluginActionLinks(array $links): array
+    {
+        if (! current_user_can('update_plugins')) {
+            return $links;
+        }
+
+        $checkLink = sprintf(
+            '<a href="%s">%s</a>',
+            esc_url(wp_nonce_url(admin_url('admin-post.php?action='.$this->manualCheckAction()), $this->manualCheckNonceAction())),
+            esc_html('Check for updates')
+        );
+
+        $updatedLinks = [];
+        $inserted = false;
+
+        foreach ($links as $key => $link) {
+            $updatedLinks[$key] = $link;
+
+            if ($key === 'deactivate') {
+                $updatedLinks['github_plugin_updater_check'] = $checkLink;
+                $inserted = true;
+            }
+        }
+
+        if (! $inserted) {
+            $updatedLinks['github_plugin_updater_check'] = $checkLink;
+        }
+
+        return $updatedLinks;
+    }
+
+    public function handleManualUpdateCheck(): void
+    {
+        if (! current_user_can('update_plugins')) {
+            wp_die(esc_html('Sorry, you are not allowed to update plugins.'));
+        }
+
+        check_admin_referer($this->manualCheckNonceAction());
+
+        $result = $this->checkForUpdate();
+        $status = 'error';
+
+        if ($result['ok']) {
+            $status = $result['update_available'] ? 'update_available' : 'current';
+        }
+
+        $redirectArgs = [
+            'github_plugin_updater_checked' => $this->config('slug'),
+            'github_plugin_updater_status' => $status,
+        ];
+
+        if (! $result['ok'] && ! empty($result['error'])) {
+            $redirectArgs['github_plugin_updater_error'] = $result['error'];
+        }
+
+        wp_safe_redirect(add_query_arg($redirectArgs, admin_url('plugins.php')));
+        exit;
+    }
+
+    public function manualUpdateNotice(): void
+    {
+        $checked = isset($_GET['github_plugin_updater_checked'])
+            ? sanitize_text_field(wp_unslash($_GET['github_plugin_updater_checked']))
+            : '';
+
+        if ($checked !== $this->config('slug')) {
+            return;
+        }
+
+        $status = isset($_GET['github_plugin_updater_status'])
+            ? sanitize_key(wp_unslash($_GET['github_plugin_updater_status']))
+            : '';
+
+        $class = 'notice notice-success is-dismissible';
+        $message = sprintf('%s is up to date.', $this->config('name'));
+
+        if ($status === 'update_available') {
+            $message = sprintf('An update is available for %s.', $this->config('name'));
+        } elseif ($status === 'error') {
+            $class = 'notice notice-error is-dismissible';
+            $message = isset($_GET['github_plugin_updater_error'])
+                ? sanitize_text_field(wp_unslash($_GET['github_plugin_updater_error']))
+                : sprintf('Could not check updates for %s.', $this->config('name'));
+        }
+
+        printf(
+            '<div class="%s"><p>%s</p></div>',
+            esc_attr($class),
+            esc_html($message)
+        );
     }
 
     /**
@@ -235,6 +334,16 @@ final class GitHubPluginUpdater
     private function repoUrl(): string
     {
         return 'https://github.com/'.$this->config('owner').'/'.$this->config('repo');
+    }
+
+    private function manualCheckAction(): string
+    {
+        return 'github_plugin_updater_check_'.$this->config('slug');
+    }
+
+    private function manualCheckNonceAction(): string
+    {
+        return $this->manualCheckAction().'_'.$this->pluginBasename();
     }
 
     private function config(string $key): string
