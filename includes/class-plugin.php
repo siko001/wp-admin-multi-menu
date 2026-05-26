@@ -16,7 +16,7 @@ class FANM_Plugin
     private FANM_Access_Page $access_page;
     private FANM_Access_Enforcer $access_enforcer;
     private FANM_Ajax_Controller $ajax_controller;
-    private FANM_GitHub_Plugin_Updater $updater;
+    private \Vendor\Plugin\Support\GitHubPluginUpdater $updater;
 
     public static function init(): void
     {
@@ -50,7 +50,7 @@ class FANM_Plugin
         $this->access_page = new FANM_Access_Page($this->access_repository, $this->scanner);
         $this->access_enforcer = new FANM_Access_Enforcer($this->access_repository, $this->scanner);
         $this->ajax_controller = new FANM_Ajax_Controller($this->repository, $this->scanner);
-        $this->updater = new FANM_GitHub_Plugin_Updater();
+        $this->updater = new \Vendor\Plugin\Support\GitHubPluginUpdater(FANM_FILE, FANM_PATH);
     }
 
     private function hooks(): void

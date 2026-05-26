@@ -12,7 +12,7 @@
  * Domain Path: /languages
  * Requires at least: 5.0
  * Tested up to: 6.6
- * Requires PHP: 7.4
+ * Requires PHP: 8.1
  */
 
 if (!defined('ABSPATH')) {
@@ -30,7 +30,7 @@ require_once FANM_PATH . 'includes/class-admin-menu-scanner.php';
 require_once FANM_PATH . 'includes/class-tree-renderer.php';
 require_once FANM_PATH . 'includes/class-assets.php';
 require_once FANM_PATH . 'includes/class-woocommerce-compatibility.php';
-require_once FANM_PATH . 'includes/class-github-plugin-updater.php';
+require_once FANM_PATH . 'src/Support/GitHubPluginUpdater.php';
 require_once FANM_PATH . 'includes/class-builder-page.php';
 require_once FANM_PATH . 'includes/class-access-page.php';
 require_once FANM_PATH . 'includes/class-access-enforcer.php';

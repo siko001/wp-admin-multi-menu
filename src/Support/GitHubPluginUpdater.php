@@ -351,7 +351,7 @@ final class GitHubPluginUpdater
         static $config = null;
 
         if ($config === null) {
-            $loaded = require $this->pluginDir . '/config/github-updater.php';
+            $loaded = require $this->pluginDir . '/config/plugin-updater.php';
             $config = is_array($loaded) ? $loaded : [];
         }
 
