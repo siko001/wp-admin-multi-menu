@@ -371,7 +371,9 @@ final class GitHubPluginUpdater
             }
         }
 
-        if (! preg_match('#/releases/tag/([^/?#]+)#', $location, $matches)) {
+        $tag = $this->tagFromReleaseUrl($location);
+
+        if ($tag === '') {
             $code = is_wp_error($response) ? 0 : (int) wp_remote_retrieve_response_code($response);
             $this->lastError = sprintf(
                 '%s Fallback could not resolve latest release redirect. HTTP %d. Location: %s',
@@ -384,7 +386,6 @@ final class GitHubPluginUpdater
             return null;
         }
 
-        $tag = rawurldecode($matches[1]);
         $release = [
             'version' => ltrim($tag, 'vV'),
             'package' => $this->repoUrl().'/releases/download/'.$tag.'/'.$this->config('zip_asset'),
@@ -395,6 +396,23 @@ final class GitHubPluginUpdater
         set_site_transient($this->config('cache_key'), $release, 6 * HOUR_IN_SECONDS);
 
         return $release;
+    }
+
+    private function tagFromReleaseUrl(string $url): string
+    {
+        $parts = wp_parse_url(trim($url));
+        $path = is_array($parts) ? (string) ($parts['path'] ?? '') : $url;
+        $marker = '/releases/tag/';
+        $position = strpos($path, $marker);
+
+        if ($position === false) {
+            return '';
+        }
+
+        $tag = substr($path, $position + strlen($marker));
+        $tag = strtok($tag, "?#/");
+
+        return is_string($tag) ? rawurldecode($tag) : '';
     }
 
     /**
