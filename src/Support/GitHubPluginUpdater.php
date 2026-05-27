@@ -6,6 +6,8 @@ namespace Vendor\Plugin\Support;
 
 final class GitHubPluginUpdater
 {
+    private string $lastError = '';
+
     public function __construct(
         private readonly string $pluginFile,
         private readonly string $pluginDir
@@ -57,7 +59,9 @@ final class GitHubPluginUpdater
             return [
                 'ok' => false,
                 'installed_version' => $installedVersion,
-                'error' => sprintf('Could not fetch a valid %s release from GitHub.', $this->config('name')),
+                'error' => $this->lastError !== ''
+                    ? $this->lastError
+                    : sprintf('Could not fetch a valid %s release from GitHub.', $this->config('name')),
             ];
         }
 
@@ -251,9 +255,21 @@ final class GitHubPluginUpdater
      */
     private function latestRelease(bool $forceRefresh = false): ?array
     {
+        $this->lastError = '';
+
         $cached = get_site_transient($this->config('cache_key'));
         if (! $forceRefresh && is_array($cached)) {
             return $cached;
+        }
+
+        if ($this->config('owner') === '' || $this->config('repo') === '' || $this->config('zip_asset') === '') {
+            $this->lastError = sprintf(
+                'Updater config is incomplete for %s. Check owner, repo, and zip_asset.',
+                $this->config('name') ?: 'this plugin'
+            );
+            set_site_transient($this->config('cache_key'), null, 5 * MINUTE_IN_SECONDS);
+
+            return null;
         }
 
         $response = wp_remote_get($this->apiUrl(), [
@@ -264,20 +280,44 @@ final class GitHubPluginUpdater
             ],
         ]);
 
-        if (is_wp_error($response) || (int) wp_remote_retrieve_response_code($response) !== 200) {
-            set_site_transient($this->config('cache_key'), null, 5 * MINUTE_IN_SECONDS);
+        if (is_wp_error($response)) {
+            $this->lastError = sprintf('GitHub request failed for %s: %s', $this->config('name'), $response->get_error_message());
 
-            return null;
+            return $this->latestReleaseFromRedirect();
+        }
+
+        $responseCode = (int) wp_remote_retrieve_response_code($response);
+
+        if ($responseCode !== 200) {
+            $this->lastError = sprintf('GitHub request failed for %s with HTTP %d.', $this->config('name'), $responseCode);
+
+            return $this->latestReleaseFromRedirect();
         }
 
         $data = json_decode((string) wp_remote_retrieve_body($response), true);
         if (! is_array($data) || empty($data['tag_name'])) {
+            $this->lastError = sprintf('GitHub returned an invalid latest release response for %s.', $this->config('name'));
             set_site_transient($this->config('cache_key'), null, 5 * MINUTE_IN_SECONDS);
 
             return null;
         }
 
         $package = $this->assetDownloadUrl($data);
+
+        if ($package === '') {
+            $assetNames = array_map(
+                static fn ($asset): string => is_array($asset) ? (string) ($asset['name'] ?? '') : '',
+                is_array($data['assets'] ?? null) ? $data['assets'] : []
+            );
+            $assetList = implode(', ', array_filter($assetNames));
+            $this->lastError = sprintf(
+                'GitHub release %s was found, but asset %s was missing. Available assets: %s',
+                (string) $data['tag_name'],
+                $this->config('zip_asset'),
+                $assetList !== '' ? $assetList : 'none'
+            );
+        }
+
         $release = [
             'version' => ltrim((string) $data['tag_name'], 'vV'),
             'package' => $package,
@@ -286,6 +326,64 @@ final class GitHubPluginUpdater
         ];
 
         set_site_transient($this->config('cache_key'), $release, $package === '' ? 5 * MINUTE_IN_SECONDS : 6 * HOUR_IN_SECONDS);
+
+        return $release;
+    }
+
+    /**
+     * @return array{version: string, package: string, notes: string, tested: string}|null
+     */
+    private function latestReleaseFromRedirect(): ?array
+    {
+        $apiError = $this->lastError;
+        $response = wp_remote_head($this->repoUrl().'/releases/latest', [
+            'timeout' => 10,
+            'redirection' => 0,
+            'headers' => [
+                'User-Agent' => $this->config('user_agent'),
+            ],
+        ]);
+
+        if (is_wp_error($response)) {
+            $this->lastError = $apiError.' Fallback failed: '.$response->get_error_message();
+            set_site_transient($this->config('cache_key'), null, 5 * MINUTE_IN_SECONDS);
+
+            return null;
+        }
+
+        $location = (string) wp_remote_retrieve_header($response, 'location');
+
+        if ($location === '') {
+            $response = wp_remote_get($this->repoUrl().'/releases/latest', [
+                'timeout' => 10,
+                'redirection' => 0,
+                'headers' => [
+                    'User-Agent' => $this->config('user_agent'),
+                ],
+            ]);
+
+            if (! is_wp_error($response)) {
+                $location = (string) wp_remote_retrieve_header($response, 'location');
+            }
+        }
+
+        if (! preg_match('#/releases/tag/([^/?#]+)#', $location, $matches)) {
+            $code = is_wp_error($response) ? 0 : (int) wp_remote_retrieve_response_code($response);
+            $this->lastError = sprintf('%s Fallback could not resolve latest release redirect. HTTP %d.', $apiError, $code);
+            set_site_transient($this->config('cache_key'), null, 5 * MINUTE_IN_SECONDS);
+
+            return null;
+        }
+
+        $tag = rawurldecode($matches[1]);
+        $release = [
+            'version' => ltrim($tag, 'vV'),
+            'package' => $this->repoUrl().'/releases/download/'.$tag.'/'.$this->config('zip_asset'),
+            'notes' => '',
+            'tested' => '',
+        ];
+
+        set_site_transient($this->config('cache_key'), $release, 6 * HOUR_IN_SECONDS);
 
         return $release;
     }
@@ -351,7 +449,8 @@ final class GitHubPluginUpdater
         static $config = null;
 
         if ($config === null) {
-            $loaded = require $this->pluginDir . '/config/plugin-updater.php';
+            $configFile = $this->pluginDir . '/config/plugin-updater.php';
+            $loaded = file_exists($configFile) ? require $configFile : [];
             $config = is_array($loaded) ? $loaded : [];
         }
 
