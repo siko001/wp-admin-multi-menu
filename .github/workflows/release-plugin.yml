@@ -27,7 +27,7 @@ jobs:
 
     env:
       PLUGIN_SLUG: multi-level-menu
-      PLUGIN_FILE: multi-level-menu.php
+      PLUGIN_FILE: admin-menu-builder.php
       ZIP_NAME: multi-level-menu.zip
       PLUGIN_NAME: Multi Level Menu
 
