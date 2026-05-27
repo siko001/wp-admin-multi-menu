@@ -351,25 +351,34 @@ final class GitHubPluginUpdater
             return null;
         }
 
-        $location = (string) wp_remote_retrieve_header($response, 'location');
+        $location = $this->headerValue($response, 'location');
 
         if ($location === '') {
             $response = wp_remote_get($this->repoUrl().'/releases/latest', [
                 'timeout' => 10,
-                'redirection' => 0,
+                'redirection' => 5,
                 'headers' => [
                     'User-Agent' => $this->config('user_agent'),
                 ],
             ]);
 
             if (! is_wp_error($response)) {
-                $location = (string) wp_remote_retrieve_header($response, 'location');
+                $location = $this->responseUrl($response);
+
+                if ($location === '') {
+                    $location = $this->headerValue($response, 'location');
+                }
             }
         }
 
         if (! preg_match('#/releases/tag/([^/?#]+)#', $location, $matches)) {
             $code = is_wp_error($response) ? 0 : (int) wp_remote_retrieve_response_code($response);
-            $this->lastError = sprintf('%s Fallback could not resolve latest release redirect. HTTP %d.', $apiError, $code);
+            $this->lastError = sprintf(
+                '%s Fallback could not resolve latest release redirect. HTTP %d. Location: %s',
+                $apiError,
+                $code,
+                $location !== '' ? $location : 'none'
+            );
             set_site_transient($this->config('cache_key'), null, 5 * MINUTE_IN_SECONDS);
 
             return null;
@@ -386,6 +395,38 @@ final class GitHubPluginUpdater
         set_site_transient($this->config('cache_key'), $release, 6 * HOUR_IN_SECONDS);
 
         return $release;
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     */
+    private function headerValue(array $response, string $name): string
+    {
+        $value = wp_remote_retrieve_header($response, $name);
+
+        if (is_array($value)) {
+            $value = end($value);
+        }
+
+        return is_string($value) ? $value : '';
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     */
+    private function responseUrl(array $response): string
+    {
+        $httpResponse = $response['http_response'] ?? null;
+
+        if (! is_object($httpResponse) || ! method_exists($httpResponse, 'get_response_object')) {
+            return '';
+        }
+
+        $responseObject = $httpResponse->get_response_object();
+
+        return is_object($responseObject) && isset($responseObject->url)
+            ? (string) $responseObject->url
+            : '';
     }
 
     /**
