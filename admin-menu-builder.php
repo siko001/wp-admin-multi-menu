@@ -4,7 +4,7 @@
  * Plugin Name: WP Admin Multi Menu
  * Plugin URI: https://github.com/siko001/wp-admin-multi-menu
  * Description: Visual admin menu builder with support for deeply nested WordPress admin menu flyouts.
- * Version: 1.0.3
+ * Version: 1.0.4
  * Author: Neil VM
  * Author URI: https://neilmallia.com
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('FANM_VERSION', '1.0.3');
+define('FANM_VERSION', '1.0.4');
 define('FANM_FILE', __FILE__);
 define('FANM_PATH', plugin_dir_path(__FILE__));
 define('FANM_URL', plugin_dir_url(__FILE__));
